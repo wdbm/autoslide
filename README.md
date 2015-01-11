@@ -14,7 +14,6 @@ sudo apt-get -y install festival
 sudo apt-get -y install sox
 sudo pip install docopt
 sudo pip install pyfiglet
-sudo pip install praw
 git clone https://github.com/wdbm/autoslide.git
 cd autoslide/
 wget https://raw.githubusercontent.com/wdbm/pyprel/master/pyprel.py
