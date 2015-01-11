@@ -2,6 +2,8 @@
 
 [![](http://img.youtube.com/vi/xAqiEC1YhyI/0.jpg)](https://www.youtube.com/watch?v=xAqiEC1YhyI)
 
+- [link to introduction presentation](https://www.youtube.com/watch?v=xAqiEC1YhyI)
+
 # setup
 
 The following Bash commands, that have been tested on Ubuntu 14.10, should install prerequisites and check out abstraction.

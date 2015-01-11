@@ -41,11 +41,11 @@ Options:
     -u, --username=USERNAME   username
     -i, --input=FILE          Markdown slides file [default: slides.md]
     -o, --output=FILE         slides video file [default: slides.mp4]
-    --normalvoice             engage normal voice (not deep voice)
+    --normalvoice             engage normal voice (not deep phasor voice)
 """
 
 name    = "autoslide"
-version = "2015-01-11T0359Z"
+version = "2015-01-11T0409Z"
 
 import os
 import sys
@@ -210,6 +210,7 @@ def main(options):
             slideSoundFileName
         ]
         subprocess.call(command)
+
     program.terminate()
 
 def soundFileDuration(
