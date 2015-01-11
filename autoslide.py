@@ -41,7 +41,7 @@ Options:
     -u, --username=USERNAME   username
     -i, --input=FILE          Markdown slides file [default: slides.md]
     -o, --output=FILE         slides video file [default: slides.mp4]
-    --normalvoice             engage normal voice (not deep phasor voice)
+    --normalvoice             engage normal voice (not deep phaser voice)
 """
 
 name    = "autoslide"
