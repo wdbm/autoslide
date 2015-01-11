@@ -16,7 +16,7 @@ sudo pip install docopt
 sudo pip install pyfiglet
 sudo pip install praw
 git clone https://github.com/wdbm/autoslide.git
-cd abstraction/
+cd autoslide/
 wget https://raw.githubusercontent.com/wdbm/pyprel/master/pyprel.py
 wget https://raw.githubusercontent.com/wdbm/shijian/master/shijian.py
 wget https://raw.githubusercontent.com/wdbm/technicolor/master/technicolor.py
