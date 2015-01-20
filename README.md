@@ -23,3 +23,14 @@ wget https://raw.githubusercontent.com/wdbm/pyprel/master/pyprel.py
 wget https://raw.githubusercontent.com/wdbm/shijian/master/shijian.py
 wget https://raw.githubusercontent.com/wdbm/technicolor/master/technicolor.py
 ```
+
+# future
+
+Under consideration is accepting PDFs as input. An existing set of slides in PDF form could be provided and from this could be generated a narrated video presentation.
+
+```Bash
+# Convert the PDF to text.
+pdftotext slides.pdf slides.txt
+# Convert form feed characters to Markdown headings.
+cat slides.txt | sed -e 's/'$(printf "\014")'/# /g' > slides.md
+```
