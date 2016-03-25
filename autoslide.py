@@ -35,50 +35,66 @@ Usage:
     program [options]
 
 Options:
-    -h, --help                Show this help message.
-    --version                 Show the version and exit.
-    -v, --verbose             Show verbose logging.
-    -u, --username=USERNAME   username
-    -i, --input=FILE          Markdown slides file [default: slides.md]
-    -o, --output=FILE         slides video file [default: slides.mp4]
-    --normalvoice             engage normal voice (not deep phaser voice)
+    -h, --help               Show this help message.
+    --version                Show the version and exit.
+    -v, --verbose            Show verbose logging.
+    -s, --silent             silent
+    -u, --username=USERNAME  username
+    -i, --input=FILE         Markdown slides file [default: slides.md]
+    -o, --output=FILE        slides video file    [default: slides.mp4]
+    --normalvoice            engage normal voice (not deep phaser voice)
 """
 
 name    = "autoslide"
-version = "2015-01-11T0409Z"
+version = "2016-03-25T1717Z"
+logo    = None
 
-import os
-import sys
-import subprocess
-import time
+import contextlib
 import datetime
-import logging
-import technicolor
-import inspect
 import docopt
-import pyprel
-import shijian
+import inspect
+import logging
+import os
+import subprocess
+import sys
+import time
+import wave
+
 from   moviepy.editor import *
 from   moviepy.audio.tools.cuts import find_audio_period
-import wave
-import contextlib
+import propyte
+import pyprel
+import shijian
+import technicolor
 
 def main(options):
 
     global program
-    program = Program(options = options)
+    program = propyte.Program(
+        options = options,
+        name    = name,
+        version = version,
+        logo    = logo
+    )
+    global log
+    from propyte import log
 
-    with open(program.MarkdownFileName, "r") as MarkdownFile:
-        Markdown = MarkdownFile.read()
+    # access options and arguments
+    Markdown_filename = options["--input"]
+    video_filename    = options["--output"]
+    normal_voice      = options["--normalvoice"]
 
-    pyprel.printLine()
+    with open(Markdown_filename, "r") as Markdown_file:
+        Markdown = Markdown_file.read()
+
+    pyprel.print_line()
     log.info("\nMarkdown input:\n\n{Markdown}".format(Markdown = Markdown))
-    pyprel.printLine()
+    pyprel.print_line()
     
     # Create Beamer slides from the Markdown file.
-    MarkdownFileToBeamerSlides(
-        MarkdownFileName = program.MarkdownFileName,
-        fileName         = "slides.pdf"
+    Markdown_file_to_Beamer_slides(
+        Markdown_filename = Markdown_filename,
+        filename          = "slides.pdf"
     )
 
     # Convert Beamer slides to images.
@@ -96,47 +112,47 @@ def main(options):
     subprocess.call(command)
     
     # Determine the number of slides and split the Markdown into slides.
-    MarkdownSplitByHash = Markdown.split("#")
-    slides = [slide for slide in MarkdownSplitByHash if slide is not ""]
-    numberOfSlides = len(slides)
-    log.info("number of slides: {numberOfSlides}".format(
-        numberOfSlides = numberOfSlides
+    Markdown_split_by_hash = Markdown.split("#")
+    slides = [slide for slide in Markdown_split_by_hash if slide is not ""]
+    number_of_slides = len(slides)
+    log.info("number of slides: {number_of_slides}".format(
+        number_of_slides = number_of_slides
     ))
 
     # Convert individual slides to sounds.    
-    slideNumber = -1
-    slideSoundFileNames = []
+    slide_number = -1
+    slide_sound_filenames = []
     for slide in slides:
-        slideNumber += 1
-        fileName = "slide_" + str(slideNumber) + ".wav"
-        slideSoundFileNames.append(fileName)
-        stringToSoundFile(
+        slide_number += 1
+        filename = "slide_" + str(slide_number) + ".wav"
+        slide_sound_filenames.append(filename)
+        string_to_sound_file(
             text     = slide.rstrip('\n'),
-            fileName = fileName
+            filename = filename
         )
 
     # Apply sound effects as specified.
-    if program.normalvoice is not True:
-        for slideSoundFileName in slideSoundFileNames:
-            tmp_slideSoundFileName = shijian.proposeFileName(
-                fileName = slideSoundFileName
+    if normal_voice is not True:
+        for slide_sound_filename in slide_sound_filenames:
+            tmp_slide_sound_filename = shijian.propose_filename(
+                filename = slide_sound_filename
             )
-            command =\
-                "sox " +\
-                slideSoundFileName +\
-                " " +\
-                tmp_slideSoundFileName +\
+            command                      =\
+                "sox "                   +\
+                slide_sound_filename     +\
+                " "                      +\
+                tmp_slide_sound_filename +\
                 " pitch -400 tempo 0.8 phaser 1 .5 4 .5 1 -s"
             result = subprocess.check_call(
                 command,
                 shell      = True,
                 executable = "/bin/bash"
             )
-            command =\
-                "mv " +\
-                tmp_slideSoundFileName +\
-                " " +\
-                slideSoundFileName
+            command                      =\
+                "mv "                    +\
+                tmp_slide_sound_filename +\
+                " "                      +\
+                slide_sound_filename
             result = subprocess.check_call(
                 command,
                 shell      = True,
@@ -144,211 +160,112 @@ def main(options):
             )
 
     # Create video clips for each slide and its corresponding sound.
-    videoClips = []
-    slideDurations = []
-    for slideNumber in range(0, numberOfSlides):
-        log.debug("compose video clip of slide {slideNumber}".format(
-            slideNumber = slideNumber
+    video_clips = []
+    slide_durations = []
+    for slide_number in range(0, number_of_slides):
+        log.debug("compose video clip of slide {slide_number}".format(
+            slide_number = slide_number
         ))
         # Include image.
-        slideImageFileName = "slide_" + str(slideNumber) + ".png"
-        log.debug("slide image: {fileName}".format(
-            fileName = slideImageFileName
+        slide_image_filename = "slide_" + str(slide_number) + ".png"
+        log.debug("slide image: {filename}".format(
+            filename = slide_image_filename
         ))
         # Include sound.
-        slideSoundFileName = "slide_" + str(slideNumber) + ".wav"
-        log.debug("slide sound: {fileName}".format(
-            fileName = slideSoundFileName
+        slide_sound_filename = "slide_" + str(slide_number) + ".wav"
+        log.debug("slide sound: {filename}".format(
+            filename = slide_sound_filename
         ))
-        imageClip = ImageClip(slideImageFileName)
-        soundClip = AudioFileClip(slideSoundFileName)
+        image_clip = ImageClip(slide_image_filename)
+        sound_clip = AudioFileClip(slide_sound_filename)
         # Determine the slide duration using the slide sound duration.
-        duration  = soundFileDuration(slideSoundFileName)
+        duration  = sound_file_duration(slide_sound_filename)
         log.debug("slide duration: {duration} s".format(duration = duration))
-        videoClip = imageClip.set_duration(duration)
+        video_clip = image_clip.set_duration(duration)
         # Determine the slide start time by calculating the sum of the durations
         # of all previous slides.
-        if slideNumber != 0:
-            videoStartTime = sum(slideDurations[0:slideNumber])
-            log.debug("slide start time: {startTime} s".format(
-                startTime = videoStartTime
+        if slide_number != 0:
+            video_start_time = sum(slide_durations[0:slide_number])
+            log.debug("slide start time: {start_time} s".format(
+                start_time = video_start_time
             ))
         else:
-            videoStartTime = 0
-        videoClip = videoClip.set_start(videoStartTime)
-        videoClip = videoClip.set_audio(soundClip)
-        if slideNumber == 0:
-            videoClip = videoClip.fadein(0.3)
-        videoClips.append(videoClip)
-        slideDurations.append(duration)
-    fullDuration = sum(slideDurations)
+            video_start_time = 0
+        video_clip = video_clip.set_start(video_start_time)
+        video_clip = video_clip.set_audio(sound_clip)
+        if slide_number == 0:
+            video_clip = video_clip.fadein(0.3)
+        video_clips.append(video_clip)
+        slide_durations.append(duration)
+    full_duration = sum(slide_durations)
     log.debug("slides full duration: {duration} s".format(
-        duration = fullDuration
+        duration = full_duration
     ))
-    video = concatenate(videoClips)
-    log.info("rendering video {fileName}".format(
-        fileName = program.videoFileName
+    video = concatenate(video_clips)
+    log.info("rendering video {filename}".format(
+        filename = video_filename
     ))
     video.write_videofile(
-        program.videoFileName,
+        video_filename,
         fps         = 30,
         codec       = "mpeg4",
         audio_codec = "libvorbis"
     )
 
     # Remove junk.
-    for slideNumber in range(0, numberOfSlides):
-        slideImageFileName = "slide_" + str(slideNumber) + ".png"
+    for slide_number in range(0, number_of_slides):
+        slide_image_filename = "slide_" + str(slide_number) + ".png"
         command = [
             "rm",
-            slideImageFileName
+            slide_image_filename
         ]
         subprocess.call(command)
-        slideSoundFileName = "slide_" + str(slideNumber) + ".wav"
+        slide_sound_filename = "slide_" + str(slide_number) + ".wav"
         command = [
             "rm",
-            slideSoundFileName
+            slide_sound_filename
         ]
         subprocess.call(command)
 
     program.terminate()
 
-def soundFileDuration(
-    fileName = None
+def sound_file_duration(
+    filename = None
     ):
-    with contextlib.closing(wave.open(fileName, 'r')) as soundFile:
+    with contextlib.closing(wave.open(filename, 'r')) as soundFile:
         frames = soundFile.getnframes()
         rate = soundFile.getframerate()
         duration = float(frames / float(rate))
     return(duration)
 
-def MarkdownFileToBeamerSlides(
-    MarkdownFileName = None,
-    fileName = None
+def Markdown_file_to_Beamer_slides(
+    Markdown_filename = None,
+    filename          = None
     ):
     command = [
         "pandoc",
         "-t",
         "beamer",
-        MarkdownFileName,
+        Markdown_filename,
         "-o",
-        fileName
+        filename
     ]
     subprocess.call(command)
 
-def stringToSoundFile(
+def string_to_sound_file(
     text     = None,
-    fileName = None
+    filename = None
     ):
     command =\
         "echo \"" +\
         text +\
         "\" | sed -e 's/\([[:punct:]]\)//g' | text2wave -scale 1 -o " +\
-        fileName
+        filename
     result = subprocess.check_call(
         command,
         shell = True,
         executable = "/bin/bash"
     )
-
-class Program(object):
-
-    def __init__(
-        self,
-        parent  = None,
-        options = None
-        ):
-
-        # internal options
-        self.displayLogo           = True
-
-        # clock
-        global clock
-        clock = shijian.Clock(name = "program run time")
-
-        # name, version, logo
-        if "name" in globals():
-            self.name              = name
-        else:
-            self.name              = None
-        if "version" in globals():
-            self.version           = version
-        else:
-            self.version           = None
-        if "logo" in globals():
-            self.logo              = logo
-        elif "logo" not in globals() and hasattr(self, "name"):
-            self.logo              = pyprel.renderBanner(
-                                         text = self.name.upper()
-                                     )
-        else:
-            self.displayLogo       = False
-            self.logo              = None
-
-        # options
-        self.options               = options
-        self.userName              = self.options["--username"]
-        self.verbose               = self.options["--verbose"]
-        self.MarkdownFileName      = self.options["--input"]
-        self.videoFileName         = self.options["--output"]
-        self.normalvoice           = self.options["--normalvoice"]
-
-        # default values
-        if self.userName is None:
-            self.userName = os.getenv("USER")
-
-        # logging
-        global log
-        log = logging.getLogger(__name__)
-        logging.root.addHandler(technicolor.ColorisingStreamHandler())
-
-        # logging level
-        if self.verbose:
-            logging.root.setLevel(logging.DEBUG)
-        else:
-            logging.root.setLevel(logging.INFO)
-
-        self.engage()
-
-    def engage(
-        self
-        ):
-        pyprel.printLine()
-        # logo
-        if self.displayLogo:
-            log.info(pyprel.centerString(text = self.logo))
-            pyprel.printLine()
-        # engage alert
-        if self.name:
-            log.info("initiate {name}".format(
-                name = self.name
-            ))
-        # version
-        if self.version:
-            log.info("version: {version}".format(
-                version = self.version
-            ))
-        log.info("initiation time: {time}".format(
-            time = clock.startTime()
-        ))
-
-    def terminate(
-        self
-        ):
-        clock.stop()
-        log.info("termination time: {time}".format(
-            time = clock.stopTime()
-        ))
-        log.info("time full report:\n{report}".format(
-            report = shijian.clocks.report(style = "full")
-        ))
-        log.info("time statistics report:\n{report}".format(
-            report = shijian.clocks.report()
-        ))
-        log.info("terminate {name}".format(
-            name = self.name
-        ))
-        pyprel.printLine()
 
 if __name__ == "__main__":
 
